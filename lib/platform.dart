@@ -1,6 +1,6 @@
 import 'package:flame/components.dart';
-import 'dart:ui';
 import 'dart:math';
+import 'package:flutter/material.dart';
 
 class Platform extends PositionComponent {
   static final _fillPaint = Paint()..color = const Color(0xFF000000); // zwart
@@ -17,6 +17,7 @@ class Platform extends PositionComponent {
   double _shakeStrength = 0;
   bool hasShaken = false;
 
+  double highlightTime = 0.0;
 
   Platform(Vector2 position, {this.isBase = false})
       : super(
@@ -41,6 +42,10 @@ class Platform extends PositionComponent {
     }
   }
 
+  void highlight([double duration = 0.15]) {
+    highlightTime = duration;
+  }
+
    @override
   void render(Canvas canvas) {
     super.render(canvas);
@@ -56,7 +61,17 @@ class Platform extends PositionComponent {
     canvas.save();
     canvas.translate(dx, dy);
     canvas.drawRect(size.toRect(), _fillPaint);
+
+     // Highlight effect
+    if (highlightTime > 0) {
+      final highlightPaint = Paint()
+        ..color = Colors.cyanAccent
+        ..blendMode = BlendMode.plus;
+      canvas.drawRect(size.toRect(), highlightPaint);
+    }
+
     canvas.drawRect(size.toRect(), _neonPaint);
+
     canvas.restore();
   }
 
@@ -69,6 +84,11 @@ class Platform extends PositionComponent {
         _shakeTime = 0;
         _shakeStrength = 0;
       }
+    }
+
+    if (highlightTime > 0) {
+      highlightTime -= dt;
+      if (highlightTime < 0) highlightTime = 0;
     }
   }
 }

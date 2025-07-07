@@ -3,6 +3,8 @@ import 'package:flame/game.dart';
 import 'package:blockjump/game.dart' as blockjump_game;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
+import 'apptheme.dart';
+import 'startmenu.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,7 +12,10 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  runApp(const BlockJumpApp());
+  runApp(const MaterialApp(
+    home: BlockJumpApp(),
+    debugShowCheckedModeBanner: false,
+  ));
 }
 
 class BlockJumpApp extends StatefulWidget {
@@ -38,28 +43,128 @@ class _BlockJumpAppState extends State<BlockJumpApp> {
   }
 
   Future<void> _onGameOver(int score) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (score > _highScore) {
-      await prefs.setInt('highscore', score);
-      setState(() {
-        _highScore = score; 
-        _gameStarted = false;
-      });
-    } else {
-      setState(() {
-        _gameStarted = false;
-      });
-    }
+  final prefs = await SharedPreferences.getInstance();
+  bool isHighScore = false;
+  if (score > _highScore) {
+    await prefs.setInt('highscore', score);
+    setState(() {
+      _highScore = score;
+    });
+    isHighScore = true;
+  }
+
+  // Game Over popup
+  await showGeneralDialog(
+    context: context,
+    barrierDismissible: false,
+    barrierLabel: "Game Over",
+    transitionDuration: const Duration(milliseconds: 350),
+    pageBuilder: (context, animation, secondaryAnimation) {
+      return Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            constraints: const BoxConstraints(
+              maxWidth: 350,
+            ),
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.all(32),
+            decoration: AppTheme.mainBoxDecoration,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.sentiment_very_dissatisfied, color: Colors.cyanAccent, size: 64),
+                const SizedBox(height: 16),
+                Text(
+                  'Game Over',
+                  style: AppTheme.titleStyle,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Score: $score${isHighScore ? "\nNew Highscore!" : ""}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white10,
+                          foregroundColor: Colors.cyanAccent,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          elevation: 0,
+                          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        icon: const Icon(Icons.home),
+                        label: const Text('To Menu'),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          setState(() {
+                            _gameStarted = false;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.cyanAccent,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          elevation: 2,
+                          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Play Again'),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          setState(() => _gameStarted = true);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      return ScaleTransition(
+        scale: CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+        ),
+        child: child,
+      );
+    },
+  );
   }
   
   @override
-   Widget build(BuildContext context) {
+    Widget build(BuildContext context) {
     return MaterialApp(
       home: Stack(
       children: [
         if (_gameStarted) ...[
           // Bovenste bar
-           Positioned(
+            Positioned(
             top: 0,
             left: 0,
             right: 0,
@@ -68,7 +173,14 @@ class _BlockJumpAppState extends State<BlockJumpApp> {
                 final isSmall = constraints.maxWidth < 400;
                 return Container(
                   height: isSmall ? 44 : 60,
-                  color: Colors.black,
+                    decoration: AppTheme.mainBoxDecoration.copyWith(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(0),
+                      topRight: Radius.circular(0),
+                      bottomLeft: Radius.circular(0),
+                      bottomRight: Radius.circular(0),
+                    ),
+                  ),
                   alignment: Alignment.center,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -148,108 +260,3 @@ class _BlockJumpAppState extends State<BlockJumpApp> {
   }
 }
 
-class StartMenu extends StatelessWidget {
-  final VoidCallback onStart;
-  final int highScore;
-  const StartMenu({Key? key, required this.onStart, required this.highScore}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF0F2027), Color(0xFF2C5364)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'BlockJump',
-              style: TextStyle(
-                fontSize: 56,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-               decoration: TextDecoration.none,
-                shadows: [
-                  Shadow(
-                    blurRadius: 10,
-                    color: Colors.black54,
-                    offset: Offset(2, 4),
-                  )
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Highscore: $highScore',
-              style: const TextStyle(
-                fontSize: 28,
-                color: Colors.cyanAccent,
-                fontWeight: FontWeight.bold,
-                decoration: TextDecoration.none
-              ),
-            ),
-            const SizedBox(height: 40),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
-                backgroundColor: Colors.cyanAccent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(32),
-                ),
-                elevation: 8,
-                textStyle: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
-              onPressed: onStart,
-              child: const Text('Start'),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white24,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                elevation: 0,
-                textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              icon: const Icon(Icons.info_outline),
-              label: const Text('Info'),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    backgroundColor: const Color(0xFF2C5364),
-                    title: const Text(
-                      'How to play?',
-                      style: TextStyle(color: Colors.cyanAccent),
-                    ),
-                    content: const Text(
-                      'Swipe up in any direction to jump.\n'
-                      'Land on platforms to climb higher.\n'
-                      'Some platforms move, some give you a boost!\n'
-                      'Try to get as high as possible and beat your high score!',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    actions: [
-                      TextButton(
-                        child: const Text('Close', style: TextStyle(color: Colors.cyanAccent)),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

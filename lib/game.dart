@@ -10,6 +10,7 @@ import 'boosterplatform.dart';
 import 'movingplatform.dart';
 import 'tiltingplatform.dart';
 
+
 class Game extends FlameGame with PanDetector {
   late Player player;
   late World world;
@@ -146,7 +147,7 @@ class Game extends FlameGame with PanDetector {
     final double newX = minX + rand.nextDouble() * (maxX - minX);
 
     final double r = rand.nextDouble();
-    if (r < 0.10) {
+    if (r < 0.20) {
       // Moving platform
       final double amplitude = min(120, (size.x - 64) / 2);
       final double safeStartX = amplitude + rand.nextDouble() * (size.x - 2 * amplitude - 64);
@@ -215,11 +216,14 @@ class Game extends FlameGame with PanDetector {
 
         //trill platform
         platform.shake();
-
+        
         // BOOSTER: check of het een BoosterPlatform is
         if (platform is BoosterPlatform) {
           platform.boostPlayer(player);
+        } else {
+          platform.highlight();
         }
+
         
         // Check of het het basisplatform is
         if (platform.isBase == true) {
@@ -253,6 +257,5 @@ class Game extends FlameGame with PanDetector {
       }
     }
   }
-
  
 }

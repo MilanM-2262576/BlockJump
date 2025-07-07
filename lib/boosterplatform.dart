@@ -12,7 +12,7 @@ class BoosterPlatform extends Platform {
     super.render(canvas);
     // Booster-platform visueel onderscheiden (bijv. oranje glow)
     final boosterPaint = Paint()
-      ..color = const Color(0xFFFF9800)
+      ..color = const Color.fromARGB(255, 255, 240, 74)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 6
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
