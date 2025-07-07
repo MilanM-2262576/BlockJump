@@ -1,203 +1,255 @@
-import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 import 'package:flame/game.dart';
-import 'package:mygame/player.dart';
-import 'package:mygame/platform.dart';
-import 'package:flame/components.dart';
-import 'dart:math';
+import 'package:blockjump/game.dart' as blockjump_game;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 
-void main() {
-  runApp(GameWidget(game: MyGame()));
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  runApp(const BlockJumpApp());
 }
 
-class MyGame extends FlameGame with PanDetector {
-  late Player player;
-  late World world;
+class BlockJumpApp extends StatefulWidget {
+  const BlockJumpApp({Key? key}) : super(key: key);
 
-  Vector2? _swipeStart;
-  Vector2? _swipeCurrent;
-  List<Vector2> _swipeTrail = [];
+  @override
+  State<BlockJumpApp> createState() => _BlockJumpAppState();
+}
 
-  double highestPlatformY = 200;
-
-  int score = 0;
+class _BlockJumpAppState extends State<BlockJumpApp> {
+  bool _gameStarted = false;
+  int _highScore = 0;
   
   @override
-  Future<void> onLoad() async {
-    world = World();
-    add(world);
-
-    player = Player();
-    await world.add(player);
-
-    await world.add(
-      Platform(Vector2(0, size.y - 80))..size = Vector2(size.x, 80) // basisplatform, 40 pixels hoog
-    );
-    // Vaste startplatformen
-    await world.add(Platform(Vector2(80, size.y - 120)));
-    await world.add(Platform(Vector2(200, size.y - 240)));
-    await world.add(Platform(Vector2(40, size.y - 360)));
-    await world.add(Platform(Vector2(70, size.y - 460)));
-    await world.add(Platform(Vector2(160, size.y - 550)));
-    await world.add(Platform(Vector2(100, size.y - 660)));
-
-    camera.world = world;
+  void initState() {
+    super.initState();
+    _loadHighScore();
   }
 
-  @override
-  void update(double dt) {
-    super.update(dt);
-  
-    checkCollisions(dt);
-    keepInBounds(dt);
-    updateCam();
-    generatePlatforms();
-    checkScore();
+  Future<void> _loadHighScore() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _highScore = prefs.getInt('highscore') ?? 0;
+    });
   }
 
-  @override
-  void render(Canvas canvas) {
-    super.render(canvas);
-
-    //swipe trail
-    if (_swipeTrail.isNotEmpty) {
-      final trailPaint = Paint()
-        ..color = const Color(0xFF00FFFF).withOpacity(0.7)
-        ..strokeWidth = 8
-        ..strokeCap = StrokeCap.round;
-
-      for (int i = 0; i < _swipeTrail.length - 1; i++) {
-        canvas.drawLine(
-          _swipeTrail[i].toOffset(),
-          _swipeTrail[i + 1].toOffset(),
-          trailPaint..color = trailPaint.color.withOpacity((i + 1) / _swipeTrail.length),
-        );
-      }
+  Future<void> _onGameOver(int score) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (score > _highScore) {
+      await prefs.setInt('highscore', score);
+      setState(() {
+        _highScore = score; 
+        _gameStarted = false;
+      });
+    } else {
+      setState(() {
+        _gameStarted = false;
+      });
     }
+  }
+  
+  @override
+   Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Stack(
+      children: [
+        if (_gameStarted) ...[
+          // Bovenste bar
+           Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isSmall = constraints.maxWidth < 400;
+                return Container(
+                  height: isSmall ? 44 : 60,
+                  color: Colors.black,
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: isSmall ? 8 : 24),
+                        child: Text(
+                          'BlockJump',
+                          style: TextStyle(
+                            fontFamily: 'RobotoMono',
+                            color: Colors.white,
+                            fontSize: isSmall ? 18 : 24,
+                            fontWeight: FontWeight.w900,
+                            decoration: TextDecoration.none,
+                            letterSpacing: isSmall ? 2 : 6,
+                            shadows: [
+                              Shadow(
+                                blurRadius: 0,
+                                color: Color.fromARGB(255, 249, 249, 249),
+                                offset: Offset(2, 2),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: isSmall ? 8 : 24),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: isSmall ? 100 : 180, // Limiteer breedte zodat tekst nooit uit beeld gaat
+                            ),
+                            child: ValueListenableBuilder<int>(
+                              valueListenable: blockjump_game.Game.scoreNotifier,
+                              builder: (context, score, _) => Text(
+                                'Score: $score',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: const Color.fromARGB(255, 255, 255, 255),
+                                  fontSize: isSmall ? 16 : 24,
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.none,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          // Game zelf
+          Positioned.fill(
+            top: 60,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return GameWidget(
+                  game: blockjump_game.Game(
+                    onGameOver: _onGameOver,
+                  ),
+                );
+              },
+            ),
+          ),
+        ] else
+          StartMenu(
+            onStart: () => setState(() => _gameStarted = true),
+            highScore: _highScore,
+          ),
+      ],
+    ),
+    );
+  }
+}
 
-    // Score rechtsboven tonen
-    TextPainter(
-      text: TextSpan(
-        text: 'Score: $score',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-          shadows: [Shadow(blurRadius: 4, color: Colors.black, offset: Offset(2,2))]
+class StartMenu extends StatelessWidget {
+  final VoidCallback onStart;
+  final int highScore;
+  const StartMenu({Key? key, required this.onStart, required this.highScore}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF0F2027), Color(0xFF2C5364)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         ),
       ),
-      textDirection: TextDirection.ltr,
-    )
-      ..layout()
-      ..paint(canvas, Offset(size.x - 180, 20));
-  }
-
-   @override
-  void onPanStart(DragStartInfo info) {
-    _swipeStart = info.eventPosition.global;
-    _swipeCurrent = info.eventPosition.global;
-     _swipeTrail = [_swipeCurrent!];
-  }
-
-  @override
-  void onPanEnd(DragEndInfo info) {
-    if (_swipeStart != null && _swipeCurrent != null) {
-      final swipeVector = _swipeCurrent! - _swipeStart!;
-      if (swipeVector.length > 30) { // minimale swipe-afstand, pas aan naar wens
-        final direction = swipeVector.normalized();
-        const double jumpSpeed = 1020;
-        const double horizontalFactor = 0.3;
-        player.velocity = Vector2(direction.x * jumpSpeed * horizontalFactor, -jumpSpeed);
-      }
-    }
-    _swipeStart = null;
-    _swipeCurrent = null;
-    _swipeTrail.clear();
-  }
-
-  @override
-  void onPanUpdate(DragUpdateInfo info) {
-    // swipe wordt nu alleen gebruikt voor springen, dus hier niets doen
-    _swipeCurrent = info.eventPosition.global;
-    if (_swipeCurrent != null) {
-      _swipeTrail.add(_swipeCurrent!);
-      if (_swipeTrail.length > 20) { // max trail lengte
-        _swipeTrail.removeAt(0);
-      }
-    }
-  }
-
-  void generatePlatforms() {
-    // Platformen genereren tot boven het zichtbare camerabeeld
-    final cameraTop = camera.viewfinder.position.y - size.y / 2;
-    while (highestPlatformY > cameraTop - 100) {
-      final rand = Random();
-      final double minX = 0;
-      final double maxX = size.x - 80; // platform breedte
-      final double newY = highestPlatformY - 120; // afstand tussen platforms
-      final double newX = minX + rand.nextDouble() * (maxX - minX);
-
-      world.add(Platform(Vector2(newX, newY)));
-      highestPlatformY = newY;
-    }
-  }
-
-  void updateCam() {
-    final minCameraY = size.y/2;
-    final targetY = player.y;
-    camera.viewfinder.position = Vector2(size.x/2, targetY < minCameraY ? targetY : minCameraY);
-  }
-
-  void keepInBounds(double dt) {
-    // Houd speler binnen de linker- en rechterrand van het scherm
-    if (player.position.x < 0) {
-      player.position.x = 0;
-      player.velocity.x = 0;
-    }
-    if (player.position.x + player.size.x > size.x) {
-      player.position.x = size.x - player.size.x;
-      player.velocity.x = 0;
-    }
-  }
-
-  void checkCollisions(double dt) {
-    final platforms = world.children.whereType<Platform>();
-    final playerRect = player.toRect();
-
-    for (final platform in platforms) {
-      final platformRect = platform.getCollisionRect();
-
-      if (playerRect.bottom >= platformRect.top &&
-          playerRect.bottom <= platformRect.top + player.velocity.y * dt + 1 &&
-          playerRect.right > platformRect.left &&
-          playerRect.left < platformRect.right &&
-          player.velocity.y > 0) {
-        // Zet speler precies op het platform
-        player.position.y = platformRect.top - player.size.y;
-        player.velocity.y = 0; // Zet zowel x als y op 0
-        player.velocity.x = 0;
-
-  
-      }
-    }
-
-  }
-
-  void checkScore() {
-    // Score updaten: tel hoeveel platformen de speler is gepasseerd (bovenlangs of onderlangs)
-    final platforms = world.children.whereType<Platform>();
-    for (final platform in platforms) {
-      // Als speler bovenlangs passeert
-      if (!platform.hasBeenPassed && player.position.y + player.size.y < platform.position.y) {
-        platform.hasBeenPassed = true;
-        score++;
-      }
-      // Als speler weer onder het platform komt (dus terugvalt)
-      if (platform.hasBeenPassed && player.position.y + player.size.y >= platform.position.y) {
-        platform.hasBeenPassed = false;
-        score = (score > 0) ? score - 1 : 0; // score mag niet negatief worden
-      }
-  }
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'BlockJump',
+              style: TextStyle(
+                fontSize: 56,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+               decoration: TextDecoration.none,
+                shadows: [
+                  Shadow(
+                    blurRadius: 10,
+                    color: Colors.black54,
+                    offset: Offset(2, 4),
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Highscore: $highScore',
+              style: const TextStyle(
+                fontSize: 28,
+                color: Colors.cyanAccent,
+                fontWeight: FontWeight.bold,
+                decoration: TextDecoration.none
+              ),
+            ),
+            const SizedBox(height: 40),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
+                backgroundColor: Colors.cyanAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(32),
+                ),
+                elevation: 8,
+                textStyle: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              ),
+              onPressed: onStart,
+              child: const Text('Start'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white24,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                elevation: 0,
+                textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              icon: const Icon(Icons.info_outline),
+              label: const Text('Info'),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    backgroundColor: const Color(0xFF2C5364),
+                    title: const Text(
+                      'How to play?',
+                      style: TextStyle(color: Colors.cyanAccent),
+                    ),
+                    content: const Text(
+                      'Swipe up in any direction to jump.\n'
+                      'Land on platforms to climb higher.\n'
+                      'Some platforms move, some give you a boost!\n'
+                      'Try to get as high as possible and beat your high score!',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    actions: [
+                      TextButton(
+                        child: const Text('Close', style: TextStyle(color: Colors.cyanAccent)),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
-

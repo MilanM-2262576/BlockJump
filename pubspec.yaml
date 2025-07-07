@@ -1,4 +1,4 @@
-name: mygame
+name: blockjump
 description: "A new Flutter project."
 publish_to: 'none'
 version: 0.1.0
@@ -8,6 +8,7 @@ environment:
 
 dependencies:
   flame: ^1.14.0
+  shared_preferences: ^2.2.2
   flutter:
     sdk: flutter
 
