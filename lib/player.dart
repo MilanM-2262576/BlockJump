@@ -1,10 +1,13 @@
 import 'package:flame/components.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'skins.dart';
 
 //Player klasse
 class Player extends PositionComponent {
-  Player()
+  final Skin skin;
+
+  Player({required this.skin})
       : super(
           size: Vector2(50, 50),
           position: Vector2(200, 200),
@@ -25,70 +28,165 @@ class Player extends PositionComponent {
     // Pulsatie-effect op basis van snelheid en tijd
     final double pulse = 1 + 0.10 * sin(angle * 4 + position.y * 0.07);
 
-    // --- Glow ring ---
-    final glowPaint = Paint()
+    // --- Glow shape (volgt de vorm van de skin) ---
+    final Path glowPath = Path();
+    if (skin.icon == Icons.hexagon) {
+      const int sides = 6;
+      final double radius = 24;
+      for (int i = 0; i < sides; i++) {
+        final double theta = (i * 2 * pi / sides) - pi / 2;
+        final double x = radius * pulse * cos(theta);
+        final double y = radius * pulse * sin(theta);
+        if (i == 0) {
+          glowPath.moveTo(x, y);
+        } else {
+          glowPath.lineTo(x, y);
+        }
+      }
+      glowPath.close();
+    } else if (skin.icon == Icons.star) {
+      final double r = 24;
+      final double r2 = r / 2.2;
+      for (int i = 0; i < 10; i++) {
+        final double theta = (i * 2 * pi / 10) - pi / 2;
+        final double radius = i.isEven ? r : r2;
+        final double x = radius * pulse * cos(theta);
+        final double y = radius * pulse * sin(theta);
+        if (i == 0) {
+          glowPath.moveTo(x, y);
+        } else {
+          glowPath.lineTo(x, y);
+        }
+      }
+      glowPath.close();
+    } else if (skin.icon == Icons.crop_square) {
+      final rect = Rect.fromCenter(center: Offset.zero, width: 40 * pulse, height: 40 * pulse);
+      glowPath.addRect(rect);
+    } else if (skin.icon == Icons.change_history) {
+      // Driehoek
+      final double r = 24;
+      for (int i = 0; i < 3; i++) {
+        final double theta = (i * 2 * pi / 3) - pi / 2;
+        final double x = r * pulse * cos(theta);
+        final double y = r * pulse * sin(theta);
+        if (i == 0) {
+          glowPath.moveTo(x, y);
+        } else {
+          glowPath.lineTo(x, y);
+        }
+      }
+      glowPath.close();
+    } else {
+      // fallback: cirkel
+      glowPath.addOval(Rect.fromCircle(center: Offset.zero, radius: 24 * pulse));
+    }
+
+    final Paint glowPaint = Paint()
       ..shader = RadialGradient(
         colors: [
-          Colors.cyanAccent.withOpacity(0.7),
+          skin.color.withOpacity(0.45),
           Colors.transparent,
         ],
         stops: [0.7, 1.0],
-      ).createShader(Rect.fromCircle(center: Offset.zero, radius: 32));
-    canvas.drawCircle(Offset.zero, 32 * pulse, glowPaint);
+      ).createShader(Rect.fromCircle(center: Offset.zero, radius: 28 * pulse))
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
 
-    // --- Hoofdvorm: een zeshoek met gradient ---
-    final int sides = 6;
-    final double radius = 22;
-    final Path hexPath = Path();
-    for (int i = 0; i < sides; i++) {
-      final double theta = (i * 2 * pi / sides) - pi / 2;
-      final double x = radius * pulse * cos(theta);
-      final double y = radius * pulse * sin(theta);
-      if (i == 0) {
-        hexPath.moveTo(x, y);
-      } else {
-        hexPath.lineTo(x, y);
+    canvas.drawPath(glowPath, glowPaint);
+
+    // --- Hoofdvorm ---
+    final Path shapePath = Path();
+    if (skin.icon == Icons.hexagon) {
+      const int sides = 6;
+      final double radius = 22;
+      for (int i = 0; i < sides; i++) {
+        final double theta = (i * 2 * pi / sides) - pi / 2;
+        final double x = radius * pulse * cos(theta);
+        final double y = radius * pulse * sin(theta);
+        if (i == 0) {
+          shapePath.moveTo(x, y);
+        } else {
+          shapePath.lineTo(x, y);
+        }
       }
+      shapePath.close();
+    } else if (skin.icon == Icons.crop_square) {
+      final rect = Rect.fromCenter(center: Offset.zero, width: 36 * pulse, height: 36 * pulse);
+      shapePath.addRect(rect);
+    } else if (skin.icon == Icons.change_history) {
+      // Driehoek
+      final double r = 22;
+      for (int i = 0; i < 3; i++) {
+        final double theta = (i * 2 * pi / 3) - pi / 2;
+        final double x = r * pulse * cos(theta);
+        final double y = r * pulse * sin(theta);
+        if (i == 0) {
+          shapePath.moveTo(x, y);
+        } else {
+          shapePath.lineTo(x, y);
+        }
+      }
+      shapePath.close();
+    } else {
+      // fallback: cirkel
+      shapePath.addOval(Rect.fromCircle(center: Offset.zero, radius: 22 * pulse));
     }
-    hexPath.close();
 
-    final Paint hexPaint = Paint()
+    final Paint shapePaint = Paint()
       ..shader = LinearGradient(
-        colors: [Colors.blue.shade800, Colors.cyanAccent.shade700],
+        colors: [skin.color.withOpacity(0.8), skin.color],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-      ).createShader(Rect.fromCircle(center: Offset.zero, radius: radius * pulse));
+      ).createShader(Rect.fromCircle(center: Offset.zero, radius: 22 * pulse));
 
-    canvas.drawPath(hexPath, hexPaint);
+    canvas.drawPath(shapePath, shapePaint);
 
     // --- Neon rand ---
     final Paint borderPaint = Paint()
-      ..color = Colors.cyanAccent
+      ..color = skin.color
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.5;
-    canvas.drawPath(hexPath, borderPaint);
+    canvas.drawPath(shapePath, borderPaint);
 
-    // --- Ogen ---
-    final eyePaint = Paint()..color = Colors.white;
-    canvas.drawCircle(Offset(-7, -4), 3.2, eyePaint);
-    canvas.drawCircle(Offset(7, -4), 3.2, eyePaint);
+    // --- Gezichtje ---
+    final facePaint = Paint()
+      ..color = Colors.black
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
 
-    // --- Pupillen ---
-    final pupilPaint = Paint()..color = Colors.blueGrey.shade900;
-    canvas.drawCircle(Offset(-7, -4), 1.3, pupilPaint);
-    canvas.drawCircle(Offset(7, -4), 1.3, pupilPaint);
-
-    // --- Mond (smile) ---
-    final mouthPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    final mouthRect = Rect.fromCenter(center: Offset(0, 7), width: 12, height: 6);
-    canvas.drawArc(mouthRect, 0.1, pi - 0.2, false, mouthPaint);
+    switch (skin.face) {
+      case "smile":
+        canvas.drawArc(
+          Rect.fromCenter(center: Offset(0, 7), width: 12, height: 6),
+          0.1, pi - 0.2, false, facePaint);
+        canvas.drawCircle(Offset(-7, -4), 2.5, facePaint..style = PaintingStyle.fill);
+        canvas.drawCircle(Offset(7, -4), 2.5, facePaint);
+        break;
+      case "wink":
+        canvas.drawArc(
+          Rect.fromCenter(center: Offset(0, 7), width: 12, height: 6),
+          0.1, pi - 0.2, false, facePaint);
+        canvas.drawLine(
+          Offset(-9, -4), Offset(-4, -4), facePaint);
+        canvas.drawCircle(Offset(7, -4), 2.5, facePaint);
+        break;
+      case "neutral":
+        canvas.drawLine(
+          Offset(-6, 8), Offset(6, 8), facePaint);
+        canvas.drawCircle(Offset(-7, -4), 2.5, facePaint);
+        canvas.drawCircle(Offset(7, -4), 2.5, facePaint);
+        break;
+      default:
+        // fallback: smile
+        canvas.drawArc(
+          Rect.fromCenter(center: Offset(0, 7), width: 12, height: 6),
+          0.1, pi - 0.2, false, facePaint);
+        canvas.drawCircle(Offset(-7, -4), 2.5, facePaint..style = PaintingStyle.fill);
+        canvas.drawCircle(Offset(7, -4), 2.5, facePaint);
+    }
 
     // --- Accent streepje ---
     final accentPaint = Paint()
-      ..color = Colors.cyanAccent.withOpacity(0.7)
+      ..color = skin.color.withOpacity(0.7)
       ..strokeWidth = 2.2
       ..strokeCap = StrokeCap.round;
     canvas.drawLine(Offset(-10, -13), Offset(-2, -17), accentPaint);

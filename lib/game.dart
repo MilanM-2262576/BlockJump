@@ -9,13 +9,15 @@ import 'platform.dart';
 import 'boosterplatform.dart';
 import 'movingplatform.dart';
 import 'tiltingplatform.dart';
-
+import 'skins.dart';
 
 class Game extends FlameGame with PanDetector {
   late Player player;
   late World world;
 
+
   final void Function(int score)? onGameOver;
+  final Skin skin;
 
   Vector2? _swipeStart;
   Vector2? _swipeCurrent;
@@ -30,14 +32,14 @@ class Game extends FlameGame with PanDetector {
   
   bool canJump = true;
 
-  Game({this.onGameOver});
+  Game({this.onGameOver, required this.skin});
 
   @override
   Future<void> onLoad() async {
     world = World();
     add(world);
 
-    player = Player();
+    player = Player(skin: skin);
     await world.add(player);
 
     await world.add(
@@ -221,7 +223,7 @@ class Game extends FlameGame with PanDetector {
         if (platform is BoosterPlatform) {
           platform.boostPlayer(player);
         } else {
-          platform.highlight();
+           platform.highlight(skin.color); 
         }
 
         

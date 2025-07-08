@@ -9,6 +9,7 @@ environment:
 dependencies:
   flame: ^1.14.0
   shared_preferences: ^2.2.2
+  audioplayers: ^5.2.1
   flutter:
     sdk: flutter
 
@@ -21,3 +22,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/world/
+    - assets/sounds/

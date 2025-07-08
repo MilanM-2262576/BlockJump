@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import 'apptheme.dart';
 import 'startmenu.dart';
+import 'skins.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +29,7 @@ class BlockJumpApp extends StatefulWidget {
 class _BlockJumpAppState extends State<BlockJumpApp> {
   bool _gameStarted = false;
   int _highScore = 0;
+  Skin _selectedSkin = availableSkins[0];
   
   @override
   void initState() {
@@ -158,104 +160,112 @@ class _BlockJumpAppState extends State<BlockJumpApp> {
   }
   
   @override
-    Widget build(BuildContext context) {
+  Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: Stack(
-      children: [
-        if (_gameStarted) ...[
-          // Bovenste bar
+        children: [
+          if (_gameStarted) ...[
+            // Bovenste bar
             Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isSmall = constraints.maxWidth < 400;
-                return Container(
-                  height: isSmall ? 44 : 60,
+              top: 0,
+              left: 0,
+              right: 0,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isSmall = constraints.maxWidth < 400;
+                  return Container(
+                    height: isSmall ? 44 : 60,
                     decoration: AppTheme.mainBoxDecoration.copyWith(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(0),
-                      topRight: Radius.circular(0),
-                      bottomLeft: Radius.circular(0),
-                      bottomRight: Radius.circular(0),
+                      border: null,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(0),
+                        topRight: Radius.circular(0),
+                        bottomLeft: Radius.circular(0),
+                        bottomRight: Radius.circular(0),
+                      ),
                     ),
-                  ),
-                  alignment: Alignment.center,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: isSmall ? 8 : 24),
-                        child: Text(
-                          'BlockJump',
-                          style: TextStyle(
-                            fontFamily: 'RobotoMono',
-                            color: Colors.white,
-                            fontSize: isSmall ? 18 : 24,
-                            fontWeight: FontWeight.w900,
-                            decoration: TextDecoration.none,
-                            letterSpacing: isSmall ? 2 : 6,
-                            shadows: [
-                              Shadow(
-                                blurRadius: 0,
-                                color: Color.fromARGB(255, 249, 249, 249),
-                                offset: Offset(2, 2),
-                              ),
-                            ],
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: isSmall ? 8 : 24),
+                          child: Text(
+                            'BlockJump',
+                            style: TextStyle(
+                              fontFamily: 'RobotoMono',
+                              color: Colors.white,
+                              fontSize: isSmall ? 18 : 24,
+                              fontWeight: FontWeight.w900,
+                              decoration: TextDecoration.none,
+                              letterSpacing: isSmall ? 2 : 6,
+                              shadows: [
+                                Shadow(
+                                  blurRadius: 0,
+                                  color: Color.fromARGB(255, 249, 249, 249),
+                                  offset: Offset(2, 2),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: isSmall ? 8 : 24),
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: isSmall ? 100 : 180, // Limiteer breedte zodat tekst nooit uit beeld gaat
-                            ),
-                            child: ValueListenableBuilder<int>(
-                              valueListenable: blockjump_game.Game.scoreNotifier,
-                              builder: (context, score, _) => Text(
-                                'Score: $score',
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: const Color.fromARGB(255, 255, 255, 255),
-                                  fontSize: isSmall ? 16 : 24,
-                                  fontWeight: FontWeight.bold,
-                                  decoration: TextDecoration.none,
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: isSmall ? 8 : 24),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: isSmall ? 100 : 180,
+                              ),
+                              child: ValueListenableBuilder<int>(
+                                valueListenable: blockjump_game.Game.scoreNotifier,
+                                builder: (context, score, _) => Text(
+                                  'Score: $score',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: const Color.fromARGB(255, 255, 255, 255),
+                                    fontSize: isSmall ? 16 : 24,
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.none,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-          // Game zelf
-          Positioned.fill(
-            top: 60,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return GameWidget(
-                  game: blockjump_game.Game(
-                    onGameOver: _onGameOver,
-                  ),
-                );
-              },
+            // Game zelf
+            Positioned.fill(
+              top: 60,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return GameWidget(
+                    game: blockjump_game.Game(
+                      onGameOver: _onGameOver,
+                      skin: _selectedSkin,
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-        ] else
-          StartMenu(
-            onStart: () => setState(() => _gameStarted = true),
-            highScore: _highScore,
-          ),
-      ],
-    ),
+          ] else
+            StartMenu(
+              onStart: (skin) {
+                setState(() {
+                  _selectedSkin = skin;
+                  _gameStarted = true;
+                });
+              },
+              highScore: _highScore,
+            ),
+        ],
+      ),
     );
   }
 }

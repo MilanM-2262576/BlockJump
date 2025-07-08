@@ -19,6 +19,8 @@ class Platform extends PositionComponent {
 
   double highlightTime = 0.0;
 
+  Color? _highlightColor;
+
   Platform(Vector2 position, {this.isBase = false})
       : super(
           position: position,
@@ -42,11 +44,13 @@ class Platform extends PositionComponent {
     }
   }
 
-  void highlight([double duration = 0.15]) {
+  void highlight([Color color = Colors.cyanAccent, double duration = 0.15]) {
     highlightTime = duration;
+    _highlightColor = color;
   }
 
-   @override
+
+    @override
   void render(Canvas canvas) {
     super.render(canvas);
 
@@ -62,10 +66,10 @@ class Platform extends PositionComponent {
     canvas.translate(dx, dy);
     canvas.drawRect(size.toRect(), _fillPaint);
 
-     // Highlight effect
-    if (highlightTime > 0) {
+    // Highlight effect
+    if (highlightTime > 0 && _highlightColor != null) {
       final highlightPaint = Paint()
-        ..color = Colors.cyanAccent
+        ..color = _highlightColor!
         ..blendMode = BlendMode.plus;
       canvas.drawRect(size.toRect(), highlightPaint);
     }
