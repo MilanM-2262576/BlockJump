@@ -7,7 +7,7 @@ class TiltingPlatform extends Platform {
   final double angle; // vaste kantelhoek
 
   TiltingPlatform(Vector2 position)
-      : angle = (Random().nextDouble() - 0.5) * 1.0, // tussen -0.3 en +0.3 rad
+      : angle = (Random().nextDouble() - 0.5) * 1.0, 
         super(position);
 
   double get currentAngle => angle;

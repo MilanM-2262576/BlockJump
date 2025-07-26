@@ -113,12 +113,12 @@ class Player extends PositionComponent {
       final rect = Rect.fromCenter(center: Offset.zero, width: 36 * pulse, height: 36 * pulse);
       shapePath.addRect(rect);
     } else if (skin.icon == Icons.change_history) {
-      // Driehoek
       final double r = 22;
+      final double yOffset = 4;
       for (int i = 0; i < 3; i++) {
         final double theta = (i * 2 * pi / 3) - pi / 2;
         final double x = r * pulse * cos(theta);
-        final double y = r * pulse * sin(theta);
+        final double y = r * pulse * sin(theta) + yOffset;
         if (i == 0) {
           shapePath.moveTo(x, y);
         } else {
@@ -126,7 +126,7 @@ class Player extends PositionComponent {
         }
       }
       shapePath.close();
-    } else {
+    }else {
       // fallback: cirkel
       shapePath.addOval(Rect.fromCircle(center: Offset.zero, radius: 22 * pulse));
     }

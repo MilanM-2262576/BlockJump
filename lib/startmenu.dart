@@ -126,6 +126,25 @@ class _StartMenuState extends State<StartMenu> {
                           ),
                         ],
                       ),
+                      // Booster-powerup uitleg
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.arrow_upward, size: 64, color: Colors.cyanAccent),
+                          SizedBox(height: 16),
+                          Text(
+                            "Booster-powerups launch you upwards",
+                            style: TextStyle(color: Colors.white, fontSize: 20),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            "They spawn randomly during your ascend",
+                            style: TextStyle(color: Colors.cyanAccent, fontSize: 16),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -148,7 +167,7 @@ class _StartMenuState extends State<StartMenu> {
                     TextButton(
                       child: const Text('Volgende', style: TextStyle(color: Colors.cyanAccent)),
                       onPressed: () {
-                        if (controller.page! < 3) {
+                        if (controller.page! < 4) {
                           controller.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.ease);
                         }
                       },

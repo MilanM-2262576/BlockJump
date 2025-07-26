@@ -64,7 +64,7 @@ class SkinPainter extends CustomPainter {
       canvas.drawRect(rect, paint);
     } else if (skin.icon == Icons.change_history) {
       final path = Path();
-      final double r = size.width * 0.4;
+      final double r = size.width * 0.50;
       for (int i = 0; i < 3; i++) {
         final angle = (i * 2 * pi / 3) - pi / 2;
         final x = center.dx + r * cos(angle);

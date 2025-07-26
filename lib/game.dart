@@ -3,6 +3,7 @@ import 'package:flame/game.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:flame/effects.dart';
 
 import 'player.dart';
 import 'platform.dart';
@@ -10,6 +11,7 @@ import 'boosterplatform.dart';
 import 'movingplatform.dart';
 import 'tiltingplatform.dart';
 import 'skins.dart';
+import 'powerups/boostpowerup.dart';
 
 class Game extends FlameGame with PanDetector {
   late Player player;
@@ -30,6 +32,9 @@ class Game extends FlameGame with PanDetector {
   int score = 0;
   int highestscore = 0;
   
+  int lastPowerupScore = 0;
+  int previousScore = 0;
+
   bool canJump = true;
 
   Game({this.onGameOver, required this.skin});
@@ -58,11 +63,14 @@ class Game extends FlameGame with PanDetector {
   @override
   void update(double dt) {
     super.update(dt);
+
     checkCollisions(dt);
     keepInBounds(dt);
     updateCam();
     generatePlatforms();
+    generatePowerups();
     checkScore();
+    previousScore = score; // Zet dit helemaal onderaan!
   }
 
   @override
@@ -140,33 +148,54 @@ class Game extends FlameGame with PanDetector {
   }
 
   void generatePlatforms() {
-  final cameraTop = camera.viewfinder.position.y - size.y / 2;
-  while (highestPlatformY > cameraTop - 100) {
-    final rand = Random();
-    final double minX = 0;
-    final double maxX = size.x - 80;
-    final double newY = highestPlatformY - 120;
-    final double newX = minX + rand.nextDouble() * (maxX - minX);
+    final cameraTop = camera.viewfinder.position.y - size.y / 2;
+    while (highestPlatformY > cameraTop - 100) {
+      final rand = Random();
+      final double minX = 0;
+      final double maxX = size.x - 80;
+      final double newY = highestPlatformY - 120;
+      final double newX = minX + rand.nextDouble() * (maxX - minX);
 
-    final double r = rand.nextDouble();
-    if (r < 0.20) {
+      final double r = rand.nextDouble();
+    if (r < 0.15) {
       // Moving platform
       final double amplitude = min(120, (size.x - 64) / 2);
       final double safeStartX = amplitude + rand.nextDouble() * (size.x - 2 * amplitude - 64);
       world.add(MovingPlatform(Vector2(safeStartX, newY), amplitude: amplitude));
-    } else if (r < 0.18) {
+    } else if (r < 0.30) {
       // Tilting platform
       world.add(TiltingPlatform(Vector2(newX, newY)));
-    } else if (r < 0.30) {
+    } else if (r < 0.40) {
       // Booster platform
       world.add(BoosterPlatform(Vector2(newX, newY)));
     } else {
       world.add(Platform(Vector2(newX, newY)));
     }
-    highestPlatformY = newY;
+      highestPlatformY = newY;
+    }
   }
-}
 
+  void generatePowerups() {
+    // Spawn powerup bij elke 50 score, met 30% kans
+    if (
+      score > 0 &&
+      score % 20 == 0 &&  // Elke 50 punten
+      score != lastPowerupScore  // Voorkom duplicate spawns
+    ) {
+      if (Random().nextDouble() < 1.00) { // 30% kans
+        final double cameraTop = camera.viewfinder.position.y - size.y / 2;
+        final double cameraBottom = camera.viewfinder.position.y + size.y / 2;
+        final double minY = cameraTop + 40;
+        final double maxY = cameraBottom - 80;
+        final double x = size.x / 2;
+        final double y = (minY + maxY) / 2;
+        final powerupPos = Vector2(x, y);
+        world.add(BoostPowerup(powerupPos)..size = Vector2(64, 64));
+      }
+      lastPowerupScore = score;
+    }
+  }
+ 
   void updateCam() {
     final minCameraY = size.y/2;
     final targetY = player.y;
@@ -187,6 +216,23 @@ class Game extends FlameGame with PanDetector {
   void checkCollisions(double dt) {
     final platforms = world.children.whereType<Platform>();
     final playerRect = player.toRect();
+    final powerups = world.children.whereType<BoostPowerup>();
+
+    // Powerup collision
+    for (final powerup in powerups) {
+      final powerupRect = Rect.fromLTWH(
+        powerup.position.x,
+        powerup.position.y,
+        powerup.size.x,
+        powerup.size.y,
+      );
+      if (playerRect.overlaps(powerupRect)) {
+        powerup.onCollect(this);
+        // Speler omhoog schieten
+        player.velocity.y = -5000; // Pas deze waarde aan voor gewenste boost
+    
+      }
+    }
 
     for (final platform in platforms) {
       final platformRect = platform.getCollisionRect();
@@ -207,8 +253,6 @@ class Game extends FlameGame with PanDetector {
           final double slideSpeed = platform.currentAngle * 400; // Pas 400 aan voor meer/minder glijden
           player.position.x += slideSpeed * dt;
         }
-
-
         player.position.y = platformRect.top - player.size.y;
         player.velocity.y = 0;
         player.velocity.x = 0;
@@ -225,7 +269,6 @@ class Game extends FlameGame with PanDetector {
         } else {
            platform.highlight(skin.color); 
         }
-
         
         // Check of het het basisplatform is
         if (platform.isBase == true) {
@@ -255,9 +298,9 @@ class Game extends FlameGame with PanDetector {
         platform.hasBeenPassed = false;
         score = (score > 0) ? score - 1 : 0;
 
-         scoreNotifier.value = score;
+        scoreNotifier.value = score;
       }
     }
   }
- 
+
 }
